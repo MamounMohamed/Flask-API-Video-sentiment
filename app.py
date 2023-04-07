@@ -17,12 +17,14 @@ model =load_model("Emotion.h5")
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 emotions = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
 emotions_cnt = np.zeros(7)
+
 @app.route('/')
 
 def home():
        return render_template("video_uploader.html")              
 
 @app.route('/upload_video', methods=['POST'])
+
 def upload_video():
     # Get the uploaded video file
     
@@ -65,13 +67,7 @@ def upload_video():
             predictions = model.predict(face_roi)
             emotion_index = predictions.argmax()
             emotions_cnt[emotion_index]+= predictions[0][emotion_index]
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            cv2.putText(frame, emotions[emotion_index], (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 
-        cv2.imshow('frame',frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-    # Release the video capture and close all windows
     
     cap.release()
     cv2.destroyAllWindows()
@@ -81,4 +77,4 @@ def upload_video():
 
 # Run the app
 if __name__ == '__main__':
-    app.run(debug=True , host='0.0.0.0', port=80)
+    app.run(host='0.0.0.0')
