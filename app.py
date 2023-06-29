@@ -1,44 +1,73 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Apr  7 04:57:22 2023
+
+@author: mamou
+"""
 from flask import Flask, request, render_template ,jsonify
 from keras.models import load_model
 import cv2
 import numpy as np
 import os
+import datetime
 
 app = Flask(__name__)
-models = []
-
+model = load_model("Emotion.h5") 
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 emotions = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
 emotions_cnt = np.zeros(7)
-
+model_dir = 'models'
 @app.route('/')
 
 def home():
-       return render_template("video_uploader.html")              
+    
+    return render_template("video_uploader.html")              
 
 @app.route('/upload_model', methods=["POST"])
 def upload_model():
     try:
         model = request.files['model']
-        model_path = os.path.join('models', model.filename)
+        current_timestamp = str(datetime.datetime.now().timestamp())
+        model_name = current_timestamp + '_'  + model.filename
+        model_path = os.path.join(model_dir, model_name)
         model.save(model_path)
-        models.append(model.filename)
-        return "model is uploded" 
+        return "model uploaded"
     except:
-        return "model couldn't be updated"
-    return "model couldn't be updated" 
+        return "model not found"
+    return "model couldn't be uploaded" 
 
+
+
+def get_model(model_name):
+    models_list = os.listdir(model_dir)
+    models_list.sort(reverse=True)
+    if model_name is not None :
+        for model_file in models_list:
+            if model_file.split('_')[1]==model_name:
+                model = load_model(os.path.join(model_dir,model_file))
+                return
+
+    elif model_name is None:
+        return 
+    
+    else:
+        if models_list:
+            latest_model = models_list[0]
+            model = load_model(os.path.join(model_dir,latest_model))            
+        
+        
+    
     
 @app.route('/upload_video', methods=['POST'])
 
 def upload_video():
     # Get the uploaded video file
-    model_name = "Emotion.h5"
-    model_path = os.path.join('models',model_name)
-    model = load_model(model_path)
     video = request.files['video']
     video_path = os.path.join('uploads', video.filename)
     video.save(video_path)
+    model_name = "Emotion.h5"
+    
+    get_model(model_name)
     
     
     # Load the video and run emotion detection on each frame
@@ -47,12 +76,12 @@ def upload_video():
     cap = cv2.VideoCapture(video_path)
     results =[]
     while cap.isOpened():
-          
+        
+  
         # resize image
         ret, frame = cap.read()
         if not ret:
-            continue
-               
+            break
         width = 912
         height = 512
         dim = (width, height)
@@ -71,11 +100,12 @@ def upload_video():
             face_roi = cv2.resize(face_roi, (48, 48))
             face_roi = face_roi / 255.0
             face_roi = face_roi.reshape(1, 48, 48, 1)
+            
             predictions = model.predict(face_roi)
-            emotion_index = predictions.argmax()
+            
             for emotion_index in range(0,7):
                 emotions_cnt[emotion_index]+= predictions[0][emotion_index]
-
+            
     
     cap.release()
     sum = np.sum(emotions_cnt)
