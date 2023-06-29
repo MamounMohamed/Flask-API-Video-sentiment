@@ -53,8 +53,8 @@ def upload_video():
         if not ret:
             continue
                
-        width = 48
-        height = 48
+        width = 912
+        height = 512
         dim = (width, height)
         
         frame = cv2.resize(frame, dim, interpolation = cv2.INTER_AREA)
