@@ -73,7 +73,8 @@ def upload_video():
             face_roi = face_roi.reshape(1, 48, 48, 1)
             predictions = model.predict(face_roi)
             emotion_index = predictions.argmax()
-            emotions_cnt[emotion_index]+= predictions[0][emotion_index]
+            for emotion_index in range(0,7):
+                emotions_cnt[emotion_index]+= predictions[0][emotion_index]
 
     
     cap.release()
