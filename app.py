@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Apr  7 04:57:22 2023
-
-@author: mamou
-"""
 from flask import Flask, request, render_template ,jsonify
 from keras.models import load_model
 import cv2
@@ -11,9 +5,8 @@ import numpy as np
 import os
 
 app = Flask(__name__)
+models = []
 
-
-model =load_model("Emotion.h5")
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 emotions = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
 emotions_cnt = np.zeros(7)
@@ -23,15 +16,30 @@ emotions_cnt = np.zeros(7)
 def home():
        return render_template("video_uploader.html")              
 
+@app.route('/upload_model', methods=["POST"])
+def upload_model():
+    try:
+        model = request.files['model']
+        model_path = os.path.join('models', model.filename)
+        model.save(model_path)
+        models.append(model.filename)
+        return "model is uploded" 
+    except:
+        return "model couldn't be updated"
+    return "model couldn't be updated" 
+
+    
 @app.route('/upload_video', methods=['POST'])
 
 def upload_video():
     # Get the uploaded video file
-    
+    model_name = "Emotion.h5"
+    model_path = os.path.join('models',model_name)
+    model = load_model(model_path)
     video = request.files['video']
     video_path = os.path.join('uploads', video.filename)
     video.save(video_path)
-
+    
     
     # Load the video and run emotion detection on each frame
     
@@ -39,15 +47,14 @@ def upload_video():
     cap = cv2.VideoCapture(video_path)
     results =[]
     while cap.isOpened():
-        
-        scale_percent = 60 # percent of original size
-  
+          
         # resize image
         ret, frame = cap.read()
         if not ret:
-            break
-        width = int(frame.shape[1] * scale_percent / 100)
-        height = int(frame.shape[0] * scale_percent / 100)
+            continue
+               
+        width = 48
+        height = 48
         dim = (width, height)
         
         frame = cv2.resize(frame, dim, interpolation = cv2.INTER_AREA)
@@ -70,9 +77,10 @@ def upload_video():
 
     
     cap.release()
-    cv2.destroyAllWindows()
     sum = np.sum(emotions_cnt)
-    results = [(emotions[i] , emotions_cnt[i]/sum) for i in range(0,7)] 
+    results = dict([(emotions[i] , emotions_cnt[i]/sum) for i in range(0,7)])
+   
+    
     return jsonify(results)
 
 # Run the app
